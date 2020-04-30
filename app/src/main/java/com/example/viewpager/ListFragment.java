@@ -5,18 +5,21 @@ import android.os.Bundle;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
+import androidx.databinding.DataBindingUtil;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.text.Editable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
 
-import java.lang.reflect.Array;
+import com.example.viewpager.databinding.FragmentListBinding;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,9 +30,8 @@ import java.util.List;
  * create an instance of this fragment.
  */
 public class ListFragment extends Fragment {
-    private View mView;
-    private RecyclerView mRecyclerView = null;
-    private RvAdapter mRvAdapter = null;
+    private WordAdapter mWordAdapter = null;
+    private FragmentListBinding mBinding;
 
     private static final String ARG_COUNT = "param1";
     private Integer counter;
@@ -64,31 +66,42 @@ public class ListFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+        mBinding = DataBindingUtil.inflate(inflater,R.layout.fragment_list, container, false);
 
-        return inflater.inflate(R.layout.fragment_list, container, false);
+        mWordAdapter = new WordAdapter(mWordClickCallback);
+        mBinding.wordsList.setAdapter(mWordAdapter);
+
+        return mBinding.getRoot();
     }
     @Override public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        //view.setBackgroundColor(ContextCompat.getColor(getContext(), COLOR_MAP[counter]));
-        // フラグメントの中の設定
-        // recyclerviewの中もここで設定
-        WordRepository wordRepository = new WordRepository(getActivity().getApplication());
-        // テストデータを利用ここから
-        ArrayList<Word> mData = new ArrayList<Word>();
+        final WordListViewModel viewModel = new ViewModelProvider(this).get(WordListViewModel.class);
 
-        // RvAdapter myAdapter = new RvAdapter(wordRepository.getAllWords());
+        // 検索処理
+        //mBinding.productsSearchBtn.setOnClickListener(v -> {
+        //    Editable query = mBinding.productsSearchBox.getText();
+        //    viewModel.setQuery(query);
+        //});
 
-        ArrayList data = (ArrayList)wordRepository.getAllWords();
-
-        RvAdapter myAdapter = new RvAdapter(GetData(counter, wordRepository.getAllWords()));
-
-        RecyclerView recyclerView = view.findViewById(R.id.rv);
-        recyclerView.setLayoutManager(new LinearLayoutManager(getActivity().getApplication()));
-        recyclerView.setAdapter(myAdapter);
-
-        // TextView textViewCounter = view.findViewById(R.id.tv_counter);
-        // textViewCounter.setText("Fragment No " + (counter+1));
+        subscribeUi(viewModel.getWords());
     }
+
+    private void subscribeUi(LiveData<List<Word>> liveData){
+        liveData.observe(getViewLifecycleOwner(), myWords ->{
+           if(myWords != null) {
+               // ロード中
+               // mBinding.setIsLoading(false);
+               mWordAdapter.setWordList(myWords);
+           }
+           else{
+               // ロード中
+               // mBinding.setIsLoading(true);
+           }
+
+           mBinding.executePendingBindings();
+        });
+    }
+
     private ArrayList<Word> GetData(int position, ArrayList<Word> mData){
         // データを取得
         ArrayList<Word> data = new ArrayList<Word>();
@@ -114,5 +127,9 @@ public class ListFragment extends Fragment {
         }
         return data;
     }
-
+    private final WordClickCallback mWordClickCallback = word -> {
+        if(getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)){
+            ((MainActivity)requireActivity()).show(word);
+        }
+    };
 }
