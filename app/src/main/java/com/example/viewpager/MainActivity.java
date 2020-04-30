@@ -47,4 +47,11 @@ public class MainActivity extends AppCompatActivity {
         ViewPagerAdapter adapter = new ViewPagerAdapter(this);
         return adapter;
     }
+
+    public void show(Word word){
+        WordFragment wordFragment = WordFragment.forWord(word.getWordId());
+
+        getSupportFragmentManager().beginTransaction().addToBackStack("word").replace(R.id.fragment_container,
+                wordFragment, null).commit();
+    }
 }
